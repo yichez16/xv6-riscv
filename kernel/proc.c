@@ -42,6 +42,43 @@ proc_mapstacks(pagetable_t kpgtbl) {
   }
 }
 
+//lab1_function: 
+//if n == 1, return # of process in the system; 
+//if n == 2, return # of syscalls that current process has made;
+//if n == 3, return # of mem pages of current process.
+void lab1_function(int n)
+{
+  struct proc *p;
+  int count = 0;
+  if(n == 1)
+  {
+    for(p = proc; p < &proc[NPROC]; p++)
+    {
+      if(p->state != UNUSED)
+          count++;
+    }
+    printf("The number of process in the system is: %d\n", count);
+  }
+
+  else if (n == 2)
+  {
+    
+  }
+  
+}
+
+
+
+//hello: printing hello msg
+void print_hello(int n)
+{
+  printf("Hello from the kernel space %d\n", n);
+}
+
+
+
+
+
 // initialize the proc table at boot time.
 void
 procinit(void)

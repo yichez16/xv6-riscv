@@ -20,3 +20,5 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
+#define SYS_hello  22 // hello
+#define SYS_lab1   23 // First lab

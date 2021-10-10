@@ -7,6 +7,29 @@
 #include "spinlock.h"
 #include "proc.h"
 
+
+uint64 sys_lab1(void) // lab 1 syscall definition
+{
+  int n;
+  argint(0, &n);
+  lab1_function(n);
+  return 0;
+}
+
+
+
+
+
+
+uint64 sys_hello(void) // hello syscall definition
+{
+  int n;
+  argint(0, &n);
+  print_hello(n);
+  return 0;
+}
+
+
 uint64
 sys_exit(void)
 {
