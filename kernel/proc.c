@@ -65,8 +65,15 @@ void lab1_function(int n)
   {
      struct proc *p;
      p = myproc();
-     printf("# of syscalls that process %d has made %d\n",p->pid, systemCallCount[p->pid]);
-     //for(int i = 0;i<NPROC;i++){printf("%d\n",systemCallCount[i]);}   // To see all syscall perProcess
+     printf("Total %d System Calls that current process (Process ID %d) has made so far\n",systemCallCount[p->pid],p->pid);
+  }
+
+  else if (n == 3)
+  {
+      struct proc *p;
+      p = myproc();
+      int numPages = p->sz/PGSIZE;
+      printf("Current Process (Process ID %d) is using %d memory pages\n",p->pid,numPages);             
   }
   
 }

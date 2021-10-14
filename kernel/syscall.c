@@ -7,7 +7,7 @@
 #include "syscall.h"
 #include "defs.h"
 
-//int systemCallCount[NPROC]; // keeps track the total sysyem call count per process
+
 
 // Fetch the uint64 at addr from the current process.
 int
