@@ -7,6 +7,8 @@
 #include "syscall.h"
 #include "defs.h"
 
+//int systemCallCount[NPROC]; // keeps track the total sysyem call count per process
+
 // Fetch the uint64 at addr from the current process.
 int
 fetchaddr(uint64 addr, uint64 *ip)
@@ -142,6 +144,9 @@ syscall(void)
   num = p->trapframe->a7;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();
+    //printf("Inside system call pID %d Pname %s num=",p->pid, p->name, num);
+    systemCallCount[p->pid]++;
+
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);

@@ -27,6 +27,8 @@ struct cpu {
 };
 
 extern struct cpu cpus[NCPU];
+extern int systemCallCount[NPROC]; // keeps track the total sysyem call count per process
+
 
 // per-process data for the trap handling code in trampoline.S.
 // sits in a page by itself just under the trampoline page in the

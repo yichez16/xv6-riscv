@@ -9,6 +9,7 @@
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
+int systemCallCount[NPROC]; // keeps track the total sysyem call count per process
 
 struct proc *initproc;
 
@@ -57,12 +58,15 @@ void lab1_function(int n)
       if(p->state != UNUSED)
           count++;
     }
-    printf("The number of process in the system is: %d\n", count);
+    printf("The number of  process in the system is: %d\n", count);
   }
 
   else if (n == 2)
   {
-    
+     struct proc *p;
+     p = myproc();
+     printf("# of syscalls that process %d has made %d\n",p->pid, systemCallCount[p->pid]);
+     //for(int i = 0;i<NPROC;i++){printf("%d\n",systemCallCount[i]);}   // To see all syscall perProcess
   }
   
 }
@@ -84,6 +88,7 @@ void
 procinit(void)
 {
   struct proc *p;
+
   
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
@@ -156,6 +161,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
