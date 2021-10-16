@@ -12,7 +12,6 @@ uint64 sys_lab1(void) // lab 1 syscall definition
 {
   int n;
   argint(0, &n);
-  //lab1_function(n);
   info(n);
   return 0;
 }
