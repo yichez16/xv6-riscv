@@ -44,14 +44,14 @@ proc_mapstacks(pagetable_t kpgtbl) {
 }
 
 //lab1_function: 
-//if n == 1, return # of process in the system; 
-//if n == 2, return # of syscalls that current process has made;
-//if n == 3, return # of mem pages of current process.
-void lab1_function(int n)
+//if param == 1, return # of process in the system; 
+//if param == 2, return # of syscalls that current process has made;
+//if param == 3, return # of mem pages of current process.
+int info(int param)
 {
   struct proc *p;
   int count = 0;
-  if(n == 1)
+  if(param == 1)
   {
     for(p = proc; p < &proc[NPROC]; p++)
     {
@@ -61,20 +61,24 @@ void lab1_function(int n)
     printf("The number of  process in the system is: %d\n", count);
   }
 
-  else if (n == 2)
+  else if (param == 2)
   {
      struct proc *p;
      p = myproc();
      printf("Total %d System Calls that current process (Process ID %d) has made so far\n",systemCallCount[p->pid],p->pid);
   }
 
-  else if (n == 3)
+  else if (param == 3)
   {
       struct proc *p;
       p = myproc();
-      int numPages = p->sz/PGSIZE;
+      int numPages;
+      if(p->sz%PGSIZE == 0) numPages =  p->sz/PGSIZE;
+      else
+          numPages = 1+(p->sz/PGSIZE);
       printf("Current Process (Process ID %d) is using %d memory pages\n",p->pid,numPages);             
   }
+  return 1;
   
 }
 
@@ -214,6 +218,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
 }
 
 // Create a user page table for a given process,
