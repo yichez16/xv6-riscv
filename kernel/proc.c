@@ -5,11 +5,18 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "stat.h"
+
 
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 int systemCallCount[NPROC]; // keeps track the total sysyem call count per process
+int ticksCount[NPROC]; // keeps track the total sysyem call count per process
+int progFlag=1;
+int prog1ID;
+int prog2ID;
+int prog3ID;
 
 struct proc *initproc;
 
@@ -43,10 +50,43 @@ proc_mapstacks(pagetable_t kpgtbl) {
   }
 }
 
+
+int settickets(int n,int programNum)
+{
+      struct proc *p;
+      p = myproc();
+      if(progFlag==1)
+      {
+
+        printf("\nTicks value of each program\n\n");
+        progFlag = 0;
+      }
+
+      if(programNum==1)prog1ID=p->pid,printf("Prog1 : %d\n",ticksCount[p->pid]);
+      else if(programNum==2)prog2ID = p->pid,printf("Prog2 : %d\n",ticksCount[p->pid]);
+      else if(programNum==3)prog3ID= p->pid,printf("Prog3 : %d\n",ticksCount[p->pid]);
+
+
+
+  return 1;
+}
+
+
+
+int giveTickets(int n)
+{
+      struct proc *p;
+      p = myproc();
+      p->tickets = n;
+      ticksCount[p->pid] = 0;
+    return 1;
+}
+
 //lab1_function: 
 //if param == 1, return # of process in the system; 
 //if param == 2, return # of syscalls that current process has made;
 //if param == 3, return # of mem pages of current process.
+
 int info(int param)
 {
   struct proc *p;
@@ -58,7 +98,7 @@ int info(int param)
       if(p->state != UNUSED)
           count++;
     }
-    printf("The number of  process in the system is: %d\n", count);
+    printf("The number of  process in the system is: %d\n ", count,p->name);
   }
 
   else if (param == 2)
@@ -173,6 +213,8 @@ found:
   p->pid = allocpid();
   p->state = USED;
   systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
+  p->tickets = 1;
+  ticksCount[p->pid] = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -218,7 +260,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
-  systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
+  systemCallCount[p->pid] = 0; // total sysyem call count set to zero for destroyed process
 }
 
 // Create a user page table for a given process,
@@ -280,6 +322,7 @@ uchar initcode[] = {
 void
 userinit(void)
 {
+
   struct proc *p;
 
   p = allocproc();
@@ -482,6 +525,112 @@ wait(uint64 addr)
   }
 }
 
+
+
+unsigned long int temp = 1;
+
+int rand(int n) 
+{
+    temp = temp * 2308525491 + 157;
+    return (unsigned int)(temp/16384) % n;
+}
+
+
+#define N 624
+#define M 397
+#define MATRIX_A 0x9908b0df   /* constant vector a */
+#define UPPER_MASK 0x80000000 /* most significant w-r bits */
+#define LOWER_MASK 0x7fffffff /* least significant r bits */
+
+/* Tempering parameters */
+#define TEMPERING_MASK_B 0x9d2c5680
+#define TEMPERING_MASK_C 0xefc60000
+#define TEMPERING_SHIFT_U(y)  (y >> 11)
+#define TEMPERING_SHIFT_S(y)  (y << 7)
+#define TEMPERING_SHIFT_T(y)  (y << 15)
+#define TEMPERING_SHIFT_L(y)  (y >> 18)
+
+#define RAND_MAX 0x7fffffff
+
+static unsigned long mt[N]; /* the array for the state vector  */
+static int mti=N+1; /* mti==N+1 means mt[N] is not initialized */
+
+/* initializing the array with a NONZERO seed */
+void
+sgenrand(unsigned long seed)
+{
+    /* setting initial seeds to mt[N] using         */
+    /* the generator Line 25 of Table 1 in          */
+    /* [KNUTH 1981, The Art of Computer Programming */
+    /*    Vol. 2 (2nd Ed.), pp102]                  */
+    mt[0]= seed & 0xffffffff;
+    for (mti=1; mti<N; mti++)
+        mt[mti] = (69069 * mt[mti-1]) & 0xffffffff;
+}
+
+long /* for integer generation */
+genrand()
+{
+    unsigned long y;
+    static unsigned long mag01[2]={0x0, MATRIX_A};
+    /* mag01[x] = x * MATRIX_A  for x=0,1 */
+
+    if (mti >= N) { /* generate N words at one time */
+        int kk;
+
+        if (mti == N+1)   /* if sgenrand() has not been called, */
+            sgenrand(4357); /* a default initial seed is used   */
+
+        for (kk=0;kk<N-M;kk++) {
+            y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);
+            mt[kk] = mt[kk+M] ^ (y >> 1) ^ mag01[y & 0x1];
+        }
+        for (;kk<N-1;kk++) {
+            y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);
+            mt[kk] = mt[kk+(M-N)] ^ (y >> 1) ^ mag01[y & 0x1];
+        }
+        y = (mt[N-1]&UPPER_MASK)|(mt[0]&LOWER_MASK);
+        mt[N-1] = mt[M-1] ^ (y >> 1) ^ mag01[y & 0x1];
+
+        mti = 0;
+    }
+
+    y = mt[mti++];
+    y ^= TEMPERING_SHIFT_U(y);
+    y ^= TEMPERING_SHIFT_S(y) & TEMPERING_MASK_B;
+    y ^= TEMPERING_SHIFT_T(y) & TEMPERING_MASK_C;
+    y ^= TEMPERING_SHIFT_L(y);
+
+    // Strip off uppermost bit because we want a long,
+    // not an unsigned long
+    return y & RAND_MAX;
+}
+
+// Assumes 0 <= max <= RAND_MAX
+// Returns in the half-open interval [0, max]
+long random_at_most(long max) {
+  unsigned long
+    // max <= RAND_MAX < ULONG_MAX, so this is okay.
+    num_bins = (unsigned long) max + 1,
+    num_rand = (unsigned long) RAND_MAX + 1,
+    bin_size = num_rand / num_bins,
+    defect   = num_rand % num_bins;
+
+  long x;
+  do {
+   x = genrand();
+  }
+  // This is carefully written not to overflow
+  while (num_rand - defect <= (unsigned long)x);
+
+  // Truncated division is intentional
+  return x/bin_size;
+}
+
+
+
+
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -500,6 +649,9 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
+
+  /*  -----------------ROUND ROBIN------------------
+
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
@@ -516,7 +668,60 @@ scheduler(void)
       }
       release(&p->lock);
     }
-  }
+
+  */
+
+
+    //printf("Random number %d\n",rand());
+
+    //#ifdef LOTTERY
+
+
+    int totalTckts = 0;
+    for(p = proc; p < &proc[NPROC]; p++)
+    {
+      if(p->state == RUNNABLE){
+          totalTckts+= p->tickets;
+         //printf("T %d Su %d  ",p->tickets,totalTckts);
+        }
+    }
+    int randNumber = random_at_most(totalTckts);
+   // printf("\nselected %d\n",totalTckts);
+
+    //int flag = 0;
+    int tempVal = 0;
+     for(p = proc; p < &proc[NPROC]; p++)
+    {
+      if(p->state == RUNNABLE)tempVal+= p->tickets;
+      if(tempVal>randNumber)
+      {
+        //if((p->pid!=prog1ID && p->pid!=prog2ID && p->pid!=prog3ID)|| (prog1ID!=0 && prog2ID!=0 && prog3ID!=0) ){
+        //printf("\nselected %d\n",randNumber);
+        acquire(&p->lock);
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        p->state = RUNNING;
+        c->proc = p;
+        ticksCount[p->pid]+=1;
+        swtch(&c->context, &p->context);
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+        release(&p->lock);
+        
+        break;
+
+      //}
+
+           }
+
+       }
+
+      //#endif
+}
+
 }
 
 // Switch to scheduler.  Must hold only p->lock

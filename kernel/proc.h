@@ -28,6 +28,7 @@ struct cpu {
 
 extern struct cpu cpus[NCPU];
 extern int systemCallCount[NPROC]; // keeps track the total sysyem call count per process
+extern int ticksCount[NPROC]; // keeps track the total system call count per process
 
 
 // per-process data for the trap handling code in trampoline.S.
@@ -94,6 +95,7 @@ struct proc {
   int killed;                  // If non-zero, have been killed
   int xstate;                  // Exit status to be returned to parent's wait
   int pid;                     // Process ID
+  int tickets;                 // Tickets count
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process

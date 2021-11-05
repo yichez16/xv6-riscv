@@ -22,3 +22,5 @@
 #define SYS_close  21
 #define SYS_hello  22 // hello
 #define SYS_lab1   23 // First lab
+#define SYS_sched_statistics   24 // second Lab
+#define SYS_allocateTickets   25 // second lab

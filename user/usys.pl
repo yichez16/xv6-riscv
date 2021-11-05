@@ -38,4 +38,6 @@ entry("sleep");
 entry("uptime");
 entry("hello"); # hello syscall for user
 entry("lab1"); # lab 1 syscall for user
+entry("sched_statistics"); #lab 2 system call
+entry("allocateTickets"); #lab 2 system call
 

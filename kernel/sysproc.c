@@ -8,6 +8,27 @@
 #include "proc.h"
 
 
+uint64 sys_sched_statistics(void) // lab 2 syscall definition
+{
+  int n;
+  int programNum;
+  argint(0, &n);
+  argint(1, &programNum);
+  settickets(n,programNum);
+  return 0;
+}
+
+
+uint64 sys_allocateTickets(void)
+{
+  int n;
+  argint(0, &n);
+  giveTickets(n);
+  return 0;
+}
+
+
+
 uint64 sys_lab1(void) // lab 1 syscall definition
 {
   int n;

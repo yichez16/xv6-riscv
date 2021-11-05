@@ -106,6 +106,8 @@ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 void            print_hello(int); //hello
 int             info(int); // lab1_function
+int             settickets(int, int); //lab2_function
+int             giveTickets(int); //lab2 function
 
 // swtch.S
 void            swtch(struct context*, struct context*);

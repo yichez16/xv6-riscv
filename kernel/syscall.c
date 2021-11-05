@@ -108,6 +108,8 @@ extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
 extern uint64 sys_hello(void); // hello: declaration
 extern uint64 sys_lab1(void); // first lab: declaration
+extern uint64 sys_sched_statistics(void); // second lab: declaration
+extern uint64 sys_allocateTickets(void); // second lab
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -133,6 +135,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_hello]   sys_hello,   // hello: system call entry
 [SYS_lab1]    sys_lab1, // lab1: system call entry
+[SYS_sched_statistics]   sys_sched_statistics, // lab2: System call entry
+[SYS_allocateTickets]   sys_allocateTickets,  // lab2 : syscall
 };
 
 void
