@@ -16,7 +16,6 @@ int main(int argc,  char *argv[])
 
 
      int n = FUNCTION_SETS_NUMBER_OF_TICKETS(60); // write your own function here
-     //n=20;
      allocateTickets(n);
      printf("Prog3.c has been allocated %d Tickets\n",n);
      int i,k;

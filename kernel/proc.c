@@ -51,27 +51,21 @@ proc_mapstacks(pagetable_t kpgtbl) {
 }
 
 
-int settickets(int n,int programNum)
+int showStatistics(int n,int programNum)
 {
-      struct proc *p;
-      p = myproc();
-      if(progFlag==1)
+
+      if(progFlag==1) 
       {
-
-        printf("\nTicks value of each program\n\n");
-        progFlag = 0;
+      int temp=0;
+      temp = ticksCount[prog1ID]+ticksCount[prog2ID]+ticksCount[prog3ID];
+      printf("\ntotal number of ticks by all 3 programs: %d\nTicks value of each program\n",temp);
+      printf("Prog1 : %d \n",ticksCount[prog1ID]);
+      printf("Prog2 : %d \n",ticksCount[prog2ID]);
+      printf("Prog3 : %d \n",ticksCount[prog3ID]);
+      progFlag = 0;
       }
-
-      if(programNum==1)prog1ID=p->pid,printf("Prog1 : %d\n",ticksCount[p->pid]);
-      else if(programNum==2)prog2ID = p->pid,printf("Prog2 : %d\n",ticksCount[p->pid]);
-      else if(programNum==3)prog3ID= p->pid,printf("Prog3 : %d\n",ticksCount[p->pid]);
-
-
-
   return 1;
 }
-
-
 
 int giveTickets(int n)
 {
@@ -79,6 +73,10 @@ int giveTickets(int n)
       p = myproc();
       p->tickets = n;
       ticksCount[p->pid] = 0;
+      if(n==30)prog1ID = p->pid;
+      else if(n==20)prog2ID = p->pid;
+      else if(n==10)prog3ID = p->pid;
+
     return 1;
 }
 
@@ -213,7 +211,7 @@ found:
   p->pid = allocpid();
   p->state = USED;
   systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
-  p->tickets = 1;
+  p->tickets = 10;
   ticksCount[p->pid] = 0;
 
   // Allocate a trapframe page.

@@ -14,7 +14,7 @@ uint64 sys_sched_statistics(void) // lab 2 syscall definition
   int programNum;
   argint(0, &n);
   argint(1, &programNum);
-  settickets(n,programNum);
+  showStatistics(n,programNum);
   return 0;
 }
 
