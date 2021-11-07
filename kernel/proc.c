@@ -734,14 +734,14 @@ scheduler(void)
     struct proc *p = ptable.proc, *current = ptable.proc;
     int minPass = -1; 
     // acquire(&p->lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    for(p = proc; p < &proc[NPROC]; p++){
       if(p->state == RUNNABLE && (p->pass <= minPass || minPass < 0)){
           minPass = p->pass;
           current = p;
       }
-    }
+    }    // loop all processes to find process with lowest pass.
 
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    for(p = proc; p < &proc[NPROC]; p++){
       if(p->state != RUNNABLE){
         continue;
       }
@@ -750,13 +750,13 @@ scheduler(void)
 
         current = p;
         c->proc = current;
-        current->pass += current->stride;
-        current->state = RUNNING;
-        ticksCount[current->pid]+=1;
+        current->pass += current->stride;  // pass += its stride size
+        current->state = RUNNING;      //switch to this process.
+        ticksCount[current->pid]+=1;   //record one-time scheduing for this process.
         swtch(&c->context, &current->context);
         c->proc = 0;
-        release(&p->lock);
 
+        release(&p->lock);
         break;
       }
       
@@ -766,50 +766,6 @@ scheduler(void)
     #endif
 
 
-
-
-    
-    // struct proc *p;
-    // struct proc *minProc;
-
-    // for(p = proc, minProc = 0 ; p < &proc[NPROC]; p++)
-    // {
-    //   if(p->state != RUNNABLE){
-    //     continue;
-    //   }
-    //   if(p->pass < minpass){
-    //     minpass = p->pass;
-    //     minProc = p;
-    //   }     
-    // }
-
-    // if(minProc){
-    //   minProc->pass += p->stride;
-    //   p = minProc; 
-    // }
-    // for(p = proc; p < &proc[NPROC]; p++)
-    // {
-    //   // if(p->state != RUNNABLE){
-    //   //   continue;
-    //   // }
-    //   if(p->state == RUNNABLE && p == minProc){
-    //     acquire(&p->lock);
-    //     // Switch to chosen process.  It is the process's job
-    //     // to release its lock and then reacquire it
-    //     // before jumping back to us.
-    //     // p->pass += p->stride;  // lowest pass += stide
-    //     p->state = RUNNING;
-    //     c->proc = p;
-    //     ticksCount[p->pid] += 1;  
-    //     swtch(&c->context, &p->context);
-
-    //     c->proc = 0;  
-    //     release(&p->lock);
-    //     break;
-    
-    // }
-    
-    // }
     
 }
 
