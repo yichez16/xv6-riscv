@@ -17,6 +17,11 @@ int progFlag=1;
 int prog1ID;
 int prog2ID;
 int prog3ID;
+int max = 60000; // big # for stride scheduling
+struct {
+  struct spinlock lock;
+  struct proc proc[NPROC];
+} ptable;
 
 struct proc *initproc;
 
@@ -72,6 +77,8 @@ int giveTickets(int n)
       struct proc *p;
       p = myproc();
       p->tickets = n;
+      p->stride = max/n;
+      p->pass = max/n;
       ticksCount[p->pid] = 0;
       if(n==30)prog1ID = p->pid;
       else if(n==20)prog2ID = p->pid;
@@ -212,7 +219,12 @@ found:
   p->state = USED;
   systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
   p->tickets = 10;
+  p->stride = 60000/p->tickets;
+  p->pass = 0;
   ticksCount[p->pid] = 0;
+
+
+  
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -639,9 +651,7 @@ long random_at_most(long max) {
 void
 scheduler(void)
 {
-  struct proc *p;
   struct cpu *c = mycpu();
-  
   c->proc = 0;
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
@@ -672,8 +682,8 @@ scheduler(void)
 
     //printf("Random number %d\n",rand());
 
-    //#ifdef LOTTERY
-
+    #ifdef LOTTERY
+    struct proc *p;
 
     int totalTckts = 0;
     for(p = proc; p < &proc[NPROC]; p++)
@@ -688,7 +698,7 @@ scheduler(void)
 
     //int flag = 0;
     int tempVal = 0;
-     for(p = proc; p < &proc[NPROC]; p++)
+    for(p = proc; p < &proc[NPROC]; p++)
     {
       if(p->state == RUNNABLE)tempVal+= p->tickets;
       if(tempVal>randNumber)
@@ -711,16 +721,119 @@ scheduler(void)
         
         break;
 
-      //}
 
-           }
+      }
 
-       }
+    }
 
-      //#endif
+    #endif
+
+
+
+    #ifdef STRIDE
+    struct proc *p = ptable.proc, *current = ptable.proc;
+    int minPass = -1; 
+    // acquire(&p->lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE && (p->pass <= minPass || minPass < 0)){
+          minPass = p->pass;
+          current = p;
+      }
+    }
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE){
+        continue;
+      }
+      if(p->pass == minPass){
+        acquire(&p->lock);
+
+        current = p;
+        c->proc = current;
+        current->pass += current->stride;
+        current->state = RUNNING;
+        ticksCount[current->pid]+=1;
+        swtch(&c->context, &current->context);
+        c->proc = 0;
+        release(&p->lock);
+
+        break;
+      }
+      
+      
+    
+    }
+    #endif
+
+
+
+
+    
+    // struct proc *p;
+    // struct proc *minProc;
+
+    // for(p = proc, minProc = 0 ; p < &proc[NPROC]; p++)
+    // {
+    //   if(p->state != RUNNABLE){
+    //     continue;
+    //   }
+    //   if(p->pass < minpass){
+    //     minpass = p->pass;
+    //     minProc = p;
+    //   }     
+    // }
+
+    // if(minProc){
+    //   minProc->pass += p->stride;
+    //   p = minProc; 
+    // }
+    // for(p = proc; p < &proc[NPROC]; p++)
+    // {
+    //   // if(p->state != RUNNABLE){
+    //   //   continue;
+    //   // }
+    //   if(p->state == RUNNABLE && p == minProc){
+    //     acquire(&p->lock);
+    //     // Switch to chosen process.  It is the process's job
+    //     // to release its lock and then reacquire it
+    //     // before jumping back to us.
+    //     // p->pass += p->stride;  // lowest pass += stide
+    //     p->state = RUNNING;
+    //     c->proc = p;
+    //     ticksCount[p->pid] += 1;  
+    //     swtch(&c->context, &p->context);
+
+    //     c->proc = 0;  
+    //     release(&p->lock);
+    //     break;
+    
+    // }
+    
+    // }
+    
 }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
@@ -759,6 +872,7 @@ yield(void)
   sched();
   release(&p->lock);
 }
+
 
 // A fork child's very first scheduling by scheduler()
 // will swtch to forkret.
