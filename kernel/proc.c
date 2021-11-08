@@ -758,10 +758,7 @@ scheduler(void)
 
         release(&p->lock);
         break;
-      }
-      
-      
-    
+      }  
     }
     #endif
 
