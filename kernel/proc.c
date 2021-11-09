@@ -219,7 +219,7 @@ found:
   p->state = USED;
   systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
   p->tickets = 10;
-  p->stride = 60000/p->tickets;
+  p->stride = 30000/p->tickets;
   p->pass = 0;
   ticksCount[p->pid] = 0;
 
