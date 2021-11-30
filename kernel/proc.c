@@ -203,6 +203,8 @@ static struct proc*
 allocproc(void)
 {
   struct proc *p;
+  // struct proc *p = ptable.proc;
+  // char *sp;
 
   for(p = proc; p < &proc[NPROC]; p++) {
     acquire(&p->lock);
@@ -217,6 +219,8 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+
+
   systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
   p->tickets = 10;
   p->stride = 30000/p->tickets;
@@ -250,6 +254,63 @@ found:
   return p;
 }
 
+// Look in the process table for an UNUSED proc.
+// If found, initialize state required to run in the kernel,
+// and return with p->lock held.
+// If there are no free procs, or a memory allocation fails, return 0.
+// for clone function, while allocate same page table to new process.
+static struct proc*
+allocproc_thread(void)
+{
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state == UNUSED) {
+      goto found;
+    } else {
+      release(&p->lock);
+    }
+  }
+  return 0;
+
+found:
+  p->pid = allocpid();
+  p->state = USED;
+
+
+  systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
+  p->tickets = 10;
+  p->stride = 30000/p->tickets;
+  p->pass = 0;
+  ticksCount[p->pid] = 0;
+
+
+  
+
+  // Allocate a trapframe page.
+  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  // An empty user page table.
+  p->pagetable = proc_pagetable(p);
+  if(p->pagetable == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  // Set up new context to start executing at forkret,
+  // which returns to user space.
+  memset(&p->context, 0, sizeof(p->context));
+  p->context.ra = (uint64)forkret;
+  p->context.sp = p->kstack + PGSIZE;
+
+  return p;
+}
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -361,7 +422,7 @@ int
 growproc(int n)
 {
   uint sz;
-  struct proc *p = myproc();
+  struct proc *p = myproc();  // returns the struct proc pointer for the process that is running on the current CPU.
 
   sz = p->sz;
   if(n > 0){
@@ -381,7 +442,7 @@ int
 fork(void)
 {
   int i, pid;
-  struct proc *np;
+  struct proc *np; // new process
   struct proc *p = myproc();
 
   // Allocate process.
@@ -978,4 +1039,75 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+
+
+// Create a new process, copying the parent.
+// Sets up child kernel stack to return as if from fork() system call.
+
+// lab 3 clone function
+// It does more or less what fork() does, except for the following major differences: 
+  // • Address  space:  instead  of  making  a  new  address  space,  it  should  use  the  parent's  address  space  
+  // (which is thus shared between parent and child). 
+  // • File descriptors should not be duplicates of the file descriptors of the parent -- they should share 
+  // the file descriptors.  
+  // • You  might  also  notice  a  single  pointer  is  passed  to  the  call,  and  size;  this  is  the  location  of  the  
+  // child's user stack, which must be allocated by the caller (parent) before the call to clone is made. 
+  // Thus,  inside  clone(), you  should  make  sure that,  when  this  syscall  is returned,  a  child thread 
+  // runs on this stack, instead of the stack of the parent. Some basic sanity check is required for input 
+  // parameters of clone(), e.g., stack is not null.  
+int
+clone(void *stack, void *size)
+{
+  int i, pid;
+  struct proc *np; // new process
+  struct proc *p = myproc();
+
+  // Allocate process.
+  if((np = allocproc()) == 0){
+    return -1;
+  }
+
+  // parent and child share same page table.
+  np->pagetable = p->pagetable;
+
+  // Copy user memory from parent to child.
+  if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+    freeproc(np);
+    release(&np->lock);
+    return -1;
+  }
+  np->sz = p->sz;
+
+  // copy saved user registers.
+  *(np->trapframe) = *(p->trapframe);
+
+  // Cause fork to return 0 in the child.
+  np->trapframe->a0 = 0;
+  
+  // The stack parameter of clone() indicates the bottom of the stack
+  np->trapframe->sp = (uint)stack + PGSIZE; 
+
+  // increment reference counts on open file descriptors.
+  for(i = 0; i < NOFILE; i++)
+    if(p->ofile[i])
+      np->ofile[i] = filedup(p->ofile[i]);
+  np->cwd = idup(p->cwd);
+
+  safestrcpy(np->name, p->name, sizeof(p->name));
+
+  pid = np->pid;
+
+  release(&np->lock);
+
+  acquire(&wait_lock);
+  np->parent = p;
+  release(&wait_lock);
+
+  acquire(&np->lock);
+  np->state = RUNNABLE;
+  release(&np->lock);
+
+  return pid;
 }
