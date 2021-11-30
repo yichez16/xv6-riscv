@@ -139,6 +139,7 @@ UPROGS=\
 	$U/_prog1\
 	$U/_prog2\
 	$U/_prog3\
+	$U/_frisbee\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

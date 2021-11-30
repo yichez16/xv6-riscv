@@ -27,6 +27,7 @@ int hello(int); // hello
 int lab1(int); // lab1
 int sched_statistics(int,int); // lab2
 int allocateTickets(int); //lab 2
+int clone(uint64, int); //lab 3
 
 // ulib.c
 int stat(const char*, struct stat*);

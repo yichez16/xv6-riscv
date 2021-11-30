@@ -7,6 +7,18 @@
 #include "spinlock.h"
 #include "proc.h"
 
+uint64    
+sys_clone(void){   // lab 3
+  uint64 stack;
+  int size;
+  if(argaddr(0, &stack) < 0)
+    return -1;
+  if(argint(1, &size) < 0)
+    return -1;
+  
+  return clone(stack, size);
+
+}
 
 uint64 sys_sched_statistics(void) // lab 2 syscall definition
 {
@@ -141,15 +153,3 @@ sys_uptime(void)
 }
 
 
-uint64
-sys_clone(void){
-  uint64 stack;
-  int size;
-  if(argaddr(0, &stack) < 0)
-    return -1;
-  if(argint(1, &size) < 0)
-    return -1;
-  
-  return clone((void *)stack, size);
-
-}
