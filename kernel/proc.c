@@ -505,6 +505,15 @@ reparent(struct proc *p)
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait().
+
+// For  exit(),  by default, it closes all the file descriptors that a process uses. However, since these are now shared across all 
+// threads, this is not a good idea. Similarly, a parent process uses wait() to reap a child process (free up 
+// the rest of its resources such as the stack, and memory). These are also tricky because these are now shared 
+// among all the kernel threads of the same process. A good solution to this problem is to keep track of the 
+// number of threads that share an address space and only free shared resources when the last one exits or is 
+// reaped by wait (like a reference counter). Note that the last thread to exit may not be the parent. 
+// To simplify, it is ok to assume that the parent always exits last. 
+
 void
 exit(int status)
 {
@@ -535,6 +544,18 @@ exit(int status)
   // Parent might be sleeping in wait().
   wakeup(p->parent);
   
+  for(p = proc; p < &proc[NPROC]; p++){
+    if(p->parent == proc){
+      if(p->pagetable != proc->pagetable){
+        p->parent = initproc;
+      }
+      else{
+        p->parent = 0;
+        p->state = ZOMBIE;
+      }
+    }
+    
+  }
   acquire(&p->lock);
 
   p->xstate = status;
@@ -1085,7 +1106,7 @@ clone(void *stack, void *size)
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
-  
+
   // The stack parameter of clone() indicates the bottom of the stack
   np->trapframe->sp = (uint)stack + PGSIZE; 
 
