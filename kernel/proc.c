@@ -7,7 +7,6 @@
 #include "defs.h"
 #include "stat.h"
 
-static int numofthread = 1;
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];

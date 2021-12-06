@@ -17,13 +17,13 @@ int thread_create(void *(*start_routine)(void*), void *arg) {
 }
 
 void lock_init(struct lock_t *lock) {
-  lk->held = 0;
+  lk->locked = 0;
 
 }
 void lock_acquire(struct lock_t *lock) {
-  while(xchg(&lock->held, 1) != 0)
+  while(xchg(&lock->locked, 1) != 0)
     ;
 }
 void lock_release(struct lock_t *lock) {
-  xchg(&lock->held, 0);
+  xchg(&lock->locked, 0);
 }
