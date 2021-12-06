@@ -3,6 +3,15 @@
 #include "kernel/fcntl.h"
 #include "user/user.h"
 #include "kernel/param.h"
+#include "kernel/spinlock.h"
+#include "kernel/memlayout.h"
+#include "kernel/riscv.h"
+#include "kernel/proc.h"
+// #include "kernel/defs.h"
+
+
+
+// #include "kernel/mmu.h"
 
 
 

@@ -1,15 +1,16 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
 #include "user/user.h"
-#include "kernel/thread.h"
+
 
 uint num_threads;
 uint num_pass;
+
 struct frisbee
 {
     uint token;
     uint pass_value;
-    struct lock_t sl;
+    lock_t *sl;
 }spin;
 
 

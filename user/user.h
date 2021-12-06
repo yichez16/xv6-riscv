@@ -1,5 +1,10 @@
 struct stat;
 struct rtcdate;
+//struct for thread lib
+struct lock_t {
+  uint held;
+};
+typedef struct lock_t lock_t;
 
 // system calls
 int fork(void);
@@ -28,6 +33,11 @@ int lab1(int); // lab1
 int sched_statistics(int,int); // lab2
 int allocateTickets(int); //lab 2
 int clone(void*, int); //lab 3
+int thread_create(void *(*start_routine)(void*), void *arg);
+void lock_init( lock_t*);
+void lock_acquire( lock_t*);
+void lock_release( lock_t*);
+
 
 // ulib.c
 int stat(const char*, struct stat*);
@@ -45,3 +55,8 @@ void free(void*);
 int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
+
+
+
+
+
