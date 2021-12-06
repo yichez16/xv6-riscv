@@ -254,63 +254,6 @@ found:
   return p;
 }
 
-// Look in the process table for an UNUSED proc.
-// If found, initialize state required to run in the kernel,
-// and return with p->lock held.
-// If there are no free procs, or a memory allocation fails, return 0.
-// for clone function, while allocate same page table to new process.
-static struct proc*
-allocproc_thread(void)
-{
-  struct proc *p;
-
-  for(p = proc; p < &proc[NPROC]; p++) {
-    acquire(&p->lock);
-    if(p->state == UNUSED) {
-      goto found;
-    } else {
-      release(&p->lock);
-    }
-  }
-  return 0;
-
-found:
-  p->pid = allocpid();
-  p->state = USED;
-
-
-  systemCallCount[p->pid] = 0; // total sysyem call count set to zero for newly created process
-  p->tickets = 10;
-  p->stride = 30000/p->tickets;
-  p->pass = 0;
-  ticksCount[p->pid] = 0;
-
-
-  
-
-  // Allocate a trapframe page.
-  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
-    freeproc(p);
-    release(&p->lock);
-    return 0;
-  }
-
-  // An empty user page table.
-  p->pagetable = proc_pagetable(p);
-  if(p->pagetable == 0){
-    freeproc(p);
-    release(&p->lock);
-    return 0;
-  }
-
-  // Set up new context to start executing at forkret,
-  // which returns to user space.
-  memset(&p->context, 0, sizeof(p->context));
-  p->context.ra = (uint64)forkret;
-  p->context.sp = p->kstack + PGSIZE;
-
-  return p;
-}
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -1079,38 +1022,49 @@ procdump(void)
   // runs on this stack, instead of the stack of the parent. Some basic sanity check is required for input 
   // parameters of clone(), e.g., stack is not null.  
 int
-clone(void *stack, void *size)
+clone(void *stack, int size)
 {
   int i, pid;
   struct proc *np; // new process
-  struct proc *p = myproc();
+  struct proc *p = myproc(); 
 
   // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
   }
 
-  // parent and child share same page table.
-  np->pagetable = p->pagetable;
-
-  // Copy user memory from parent to child.
-  if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
-    freeproc(np);
-    release(&np->lock);
-    return -1;
-  }
+  // child shares the same address space with parent
+  np->state = UNUSED;
   np->sz = p->sz;
-
-  // copy saved user registers.
+  np->parent = p;
   *(np->trapframe) = *(p->trapframe);
+  np->pagetable = p->pagetable;
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
 
-  // The stack parameter of clone() indicates the bottom of the stack
-  np->trapframe->sp = (uint)stack + PGSIZE; 
 
-  // increment reference counts on open file descriptors.
+
+
+
+  // // Copy user memory from parent to child.
+  // if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+  //   freeproc(np);
+  //   release(&np->lock);
+  //   return -1;
+  // }
+  // np->sz = p->sz;
+
+  // copy saved user registers.
+  // *(np->trapframe) = *(p->trapframe);
+
+  // // Cause fork to return 0 in the child.
+  // np->trapframe->a0 = 0;
+
+  // The stack parameter of clone() indicates the bottom of the stack
+  // np->trapframe->sp = (uint)stack + PGSIZE; 
+
+  // use the same file descriptor
   for(i = 0; i < NOFILE; i++)
     if(p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
@@ -1118,17 +1072,37 @@ clone(void *stack, void *size)
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 
+  // // increment reference counts on open file descriptors.
+  // for(i = 0; i < NOFILE; i++)
+  //   if(p->ofile[i])
+  //     np->ofile[i] = filedup(p->ofile[i]);
+  // np->cwd = idup(p->cwd);
+
+  // safestrcpy(np->name, p->name, sizeof(p->name));
+
+  // set pointer
+  np->trapframe->sp = (uint64)(stack+PGSIZE - 4); 
+  *((uint*)(np->trapframe->sp) - 4) = 0xFFFFFFFF; 
+  np->trapframe->sp =(np->trapframe->sp) - 4;
+   
+  acquire(&np->lock);
+  np->state = RUNNABLE;
+  release(&np->lock);
+
+  np->trapframe->sp = p->trapframe->sp;  // set base pointer
+
   pid = np->pid;
 
-  release(&np->lock);
+
+  // release(&np->lock);
 
   acquire(&wait_lock);
   np->parent = p;
   release(&wait_lock);
 
-  acquire(&np->lock);
-  np->state = RUNNABLE;
-  release(&np->lock);
+  // acquire(&np->lock);
+  // np->state = RUNNABLE;
+  // release(&np->lock);
 
   return pid;
 }

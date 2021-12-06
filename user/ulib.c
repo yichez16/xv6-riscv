@@ -2,6 +2,81 @@
 #include "kernel/stat.h"
 #include "kernel/fcntl.h"
 #include "user/user.h"
+#define PGSIZE 4096
+
+
+
+
+// thread library
+void lock_init(lock_t *lock) {
+  lock->locked = 0;
+}
+
+void lock_acquire(lock_t *lock) {
+  while(__sync_lock_test_and_set(&(lock->locked), 1) != 0);
+}
+
+void lock_release(lock_t *lock) {
+  __sync_lock_test_and_set(&(lock->locked), 0);
+}
+// void lock_init(struct lock_t *lk, char *name)
+// {
+//   lk->name = name;
+//   lk->locked = 0;
+//   lk->cpu = 0;
+// }
+
+
+// void lock_acquire(struct lock_t *lk)
+// {
+//   push_off(); // disable interrupts to avoid deadlock.
+//   if(holdingByitself(lk)) panic("acquire");
+//   while(__sync_lock_test_and_set(&lk->locked, 1) != 0);
+//   __sync_synchronize();
+//   lk->cpu = mycpu();
+// }
+
+
+// void lock_release(struct lock_t *lk)
+// {
+
+//   if(!holdingByitself(lk))panic("release");
+//   lk->cpu = 0;
+//   __sync_synchronize();
+//   __sync_lock_release(&lk->locked);
+
+//   pop_off();
+// }
+
+// int holdingByitself(struct lock_t *lk)
+// {
+//   int r;
+//   r = (lk->locked && lk->cpu == mycpu());
+//   return r;
+// }
+
+
+int thread_create(void*(start_routine)(void*), void *arg) {
+  void *stack = malloc(2 * PGSIZE);
+
+  // if((uint)stack % PGSIZE)
+	// stack = stack + (PGSIZE - (uint)stack % PGSIZE);
+  
+  int size = 8;  // arg is a pointer which is 8 bytes in riscv64. 
+  int tid = clone(stack, size);
+
+  if (tid < 0) {
+      printf("Clone failed\n");
+      return 0;
+  }
+
+  return 0;
+}
+
+
+
+
+
 
 char*
 strcpy(char *s, const char *t)

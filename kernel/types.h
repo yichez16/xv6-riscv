@@ -8,3 +8,9 @@ typedef unsigned int  uint32;
 typedef unsigned long uint64;
 
 typedef uint64 pde_t;
+
+typedef struct{
+    // char name;
+    int locked;
+    // int cpu;
+}lock_t;

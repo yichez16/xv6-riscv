@@ -9,14 +9,11 @@
 
 uint64    
 sys_clone(void){   // lab 3
-  uint64 stack;
+  void *stack;
   int size;
-  if(argaddr(0, &stack) < 0)
-    return -1;
-  if(argint(1, &size) < 0)
-    return -1;
-  
-  return clone(stack, size);
+  argstr(1, (char*)(&stack), sizeof(void*));
+  argint(1, &size);
+  return clone((void*)stack, size);
 
 }
 

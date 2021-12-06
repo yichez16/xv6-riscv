@@ -108,7 +108,7 @@ void            print_hello(int); //hello
 int             info(int); // lab1_function
 int             showStatistics(int, int); //lab2_function
 int             giveTickets(int); //lab2 function
-int             clone(uint64, int);  // lab 3
+int             clone(void*, int);  // lab 3
 
 // swtch.S
 void            swtch(struct context*, struct context*);
