@@ -3,55 +3,56 @@
 #include "user/user.h"
 #include "kernel/thread.h"
 
-struct lock_t *lock;
-void* worker();
-static int output =0;
-static int numofthread;
-static int passnum;
-static int workpid=0;
-
-typedef struct arg_struct {
-  int *numPasses;
-  struct lock_t *lock;
-} lol_struct;
-
-void* worker(void *arg){
-    int pidnum = (int)arg;
-	while(output < passnum)
-	{
-		lock_acquire(lock);
-		if(output==passnum)
-			break;
-		if(pidnum==workpid)
-		{
-			output++;
-			printf("pass number no:%d is thread %d is passing the token to ",output,pidnum);
-			workpid++;
-			if(workpid ==  numofthread)// because thread num is start from 0 
-				workpid = 0 ;	
-			printf(" %d\n",workpid);
-			lock_release(lock);
-		 	sleep(1);
-		}
-		else
-		{
-			//printf(1,"this is not a correct workpid\n");
-			lock_release(lock);
-			sleep(1);
-		}
-	}    
-}
-
-int main(int argc, char *argv[]) 
+uint num_threads;
+uint num_pass;
+struct frisbee
 {
-    int numofthread =atoi(argv[1]);
-    int passnum = atoi(argv[2]);
-    lock_init(lock);
-    for(int i = 0;i < numofthread; i++)
-	{
-		thread_create(worker,(void *)i);
-	}
+    uint token;
+    uint pass_value;
+    struct lock_t sl;
+}spin;
 
-  exit(0);
+
+struct data
+{
+   int tid;
+};
+
+
+void* pass_frisbee(void* arg) {
+    struct data *fdata = (struct data *)arg;
+    int thid = fdata->tid;
+    while(spin.pass_value < num_pass){
+        lock_acquire(spin.sl);
+        if(thid == spin.token && spin.pass_value < num_pass){
+            spin.pass_value++;
+            spin.token++;
+            if(spin.token == num_threads){
+                spin.token = 0;
+            }
+            printf("Pass number no: %d, Thread %d is passing the token to thread %d\n", spin.pass_value, thid,  spin.token);
+        }
+        lock_release(spin.sl);
+    }
+    return 0;
 }
 
+int main(int argc, char *argv[]) {
+  struct data *tdata; 
+  num_threads = atoi(argv[1]);
+  num_pass = atoi(argv[2]);
+  spin.token  = 0;
+  spin.pass_value = 0;
+  lock_init(spin.sl);
+  tdata = malloc(sizeof(struct data) * num_threads);
+  for(int i = 0; i < num_threads; i++){
+      tdata[i].tid = i;
+  }
+
+  for(int i = 0; i < num_threads; i++){
+      thread_create((void *)pass_frisbee, (void *)&tdata[i]);
+  }
+  printf("Simulation of Frisbee game has finished, %d rounds were played in total! ", num_pass);  
+
+  return 0;
+}
