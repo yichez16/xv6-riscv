@@ -7,7 +7,7 @@
 #include "defs.h"
 #include "stat.h"
 
-
+static int numofthread = 1;
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -254,6 +254,41 @@ found:
   return p;
 }
 
+static struct proc*
+allocproc_c(pagetable_t pt)
+{
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state == UNUSED) {
+      goto found;
+    } else {
+      release(&p->lock);
+    }
+  }
+  return 0;
+
+found:
+  p->pid = allocpid();
+  p->state = USED;
+
+  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  p->pagetable = pt;
+  memset(&p->context, 0, sizeof(p->context));
+  p->context.ra = (uint64)forkret;
+  p->context.sp = p->kstack + PGSIZE;
+  return p;
+}
+
+
+
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -456,12 +491,11 @@ reparent(struct proc *p)
 // number of threads that share an address space and only free shared resources when the last one exits or is 
 // reaped by wait (like a reference counter). Note that the last thread to exit may not be the parent. 
 // To simplify, it is ok to assume that the parent always exits last. 
-
 void
 exit(int status)
 {
   struct proc *p = myproc();
-
+  
   if(p == initproc)
     panic("init exiting");
 
@@ -486,19 +520,7 @@ exit(int status)
 
   // Parent might be sleeping in wait().
   wakeup(p->parent);
-  
-  for(p = proc; p < &proc[NPROC]; p++){
-    if(p->parent == proc){
-      if(p->pagetable != proc->pagetable){
-        p->parent = initproc;
-      }
-      else{
-        p->parent = 0;
-        p->state = ZOMBIE;
-      }
-    }
-    
-  }
+
   acquire(&p->lock);
 
   p->xstate = status;
@@ -1025,44 +1047,33 @@ int
 clone(void *stack, int size)
 {
   int i, pid;
-  struct proc *np; // new process
-  struct proc *p = myproc(); 
+  struct proc *np; // child process
+  struct proc *p = myproc(); // parent process
 
   // Allocate process.
-  if((np = allocproc()) == 0){
+  if((np = allocproc_c(p->pagetable)) == 0){
     return -1;
   }
 
   // child shares the same address space with parent
-  np->state = UNUSED;
-  np->sz = p->sz;
-  np->parent = p;
-  *(np->trapframe) = *(p->trapframe);
-  np->pagetable = p->pagetable;
+  np->pagetable = p->pagetable;  // same page table
+  np->sz = p->sz;  // same size
+  *np->trapframe = *p->trapframe;
 
-  // Cause fork to return 0 in the child.
-  np->trapframe->a0 = 0;
-
-
-
-
-
-  // // Copy user memory from parent to child.
-  // if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
-  //   freeproc(np);
-  //   release(&np->lock);
-  //   return -1;
-  // }
-  // np->sz = p->sz;
-
-  // copy saved user registers.
-  // *(np->trapframe) = *(p->trapframe);
-
-  // // Cause fork to return 0 in the child.
-  // np->trapframe->a0 = 0;
-
-  // The stack parameter of clone() indicates the bottom of the stack
-  // np->trapframe->sp = (uint)stack + PGSIZE; 
+  if (p->pid > 0) {
+    if(mappages(np->pagetable, TRAPFRAME- PGSIZE * (p->pid), PGSIZE,
+                (uint64)(np->trapframe), PTE_R | PTE_W) < 0){
+      uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
+      return 0;
+    }
+  }
+  else {
+    if(mappages(np->pagetable, TRAPFRAME, PGSIZE,
+                (uint64)(np->trapframe), PTE_R | PTE_W) < 0){
+      uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
+      return 0;
+    }
+  }
 
   // use the same file descriptor
   for(i = 0; i < NOFILE; i++)
@@ -1071,38 +1082,17 @@ clone(void *stack, int size)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
-
-  // // increment reference counts on open file descriptors.
-  // for(i = 0; i < NOFILE; i++)
-  //   if(p->ofile[i])
-  //     np->ofile[i] = filedup(p->ofile[i]);
-  // np->cwd = idup(p->cwd);
-
-  // safestrcpy(np->name, p->name, sizeof(p->name));
-
-  // set pointer
-  np->trapframe->sp = (uint64)(stack+PGSIZE - 4); 
-  *((uint*)(np->trapframe->sp) - 4) = 0xFFFFFFFF; 
-  np->trapframe->sp =(np->trapframe->sp) - 4;
-   
-  acquire(&np->lock);
-  np->state = RUNNABLE;
-  release(&np->lock);
-
-  np->trapframe->sp = p->trapframe->sp;  // set base pointer
-
   pid = np->pid;
 
-
-  // release(&np->lock);
+  release(&np->lock);
 
   acquire(&wait_lock);
   np->parent = p;
   release(&wait_lock);
 
-  // acquire(&np->lock);
-  // np->state = RUNNABLE;
-  // release(&np->lock);
+  acquire(&np->lock);
+  np->state = RUNNABLE;
+  release(&np->lock);
 
   return pid;
 }

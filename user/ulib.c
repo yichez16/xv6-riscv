@@ -4,45 +4,6 @@
 #include "user/user.h"
 #include "kernel/param.h"
 
-#define PGSIZE 4096
-
-
-
-
-// thread library
-void lock_init(lock_t *lock) {
-  lock->locked = 0;
-}
-
-void lock_acquire(lock_t *lock) {
-  while(__sync_lock_test_and_set(&(lock->locked), 1) != 0);
-}
-
-void lock_release(lock_t *lock) {
-  __sync_lock_test_and_set(&(lock->locked), 0);
-}
-
-
-int thread_create(void*(start_routine)(void*), void *arg) {
-  // void *stack = malloc(2 * PGSIZE);
-
-  // if((uint)stack % PGSIZE)
-	// stack = stack + (PGSIZE - (uint)stack % PGSIZE);
-  
-  int size = 8;  // arg is a pointer which is 8 bytes in riscv64. 
-  int tid = clone(stack, size);
-
-  if (tid < 0) {
-      // printf("Clone failed\n");
-      return 0;
-  }
-
-  return 0;
-}
-
-
-
-
 
 
 char*
