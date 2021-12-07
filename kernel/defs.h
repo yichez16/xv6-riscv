@@ -109,6 +109,7 @@ int             info(int); // lab1_function
 int             showStatistics(int, int); //lab2_function
 int             giveTickets(int); //lab2 function
 int             clone(void*, int);  // lab 3
+void            texit(void);
 
 // swtch.S
 void            swtch(struct context*, struct context*);

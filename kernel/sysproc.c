@@ -17,6 +17,13 @@ sys_clone(void){   // lab 3
 
 }
 
+uint64    
+sys_texit(void){   // lab 3
+  texit();
+  return 0;
+
+}
+
 uint64 sys_sched_statistics(void) // lab 2 syscall definition
 {
   int n;

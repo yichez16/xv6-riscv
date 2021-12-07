@@ -33,10 +33,11 @@ int lab1(int); // lab1
 int sched_statistics(int,int); // lab2
 int allocateTickets(int); //lab 2
 int clone(void*, int); //lab 3
-int thread_create(void *(*start_routine)(void*), void *arg);
+void *thread_create(void *(*start_routine)(void*), void *);
 void lock_init( lock_t*);
 void lock_acquire( lock_t*);
 void lock_release( lock_t*);
+void texit(void) __attribute__((noreturn));
 
 
 // ulib.c

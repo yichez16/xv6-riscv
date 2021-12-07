@@ -2,58 +2,50 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
+int pass = 0;
+int pass_num = 0;
+int thread_num;
+int thrower;
 
-uint num_threads;
-uint num_pass;
+lock_t lock;
 
-struct frisbee
+void *player(void *arg)
 {
-    uint token;
-    uint pass_value;
-    lock_t *sl;
-}spin;
-
-
-struct data
-{
-   int tid;
-};
-
-
-void* pass_frisbee(void* arg) {
-    struct data *fdata = (struct data *)arg;
-    int thid = fdata->tid;
-    while(spin.pass_value < num_pass){
-        lock_acquire(spin.sl);
-        if(thid == spin.token && spin.pass_value < num_pass){
-            spin.pass_value++;
-            spin.token++;
-            if(spin.token == num_threads){
-                spin.token = 0;
-            }
-            printf("Pass number no: %d, Thread %d is passing the token to thread %d\n", spin.pass_value, thid,  spin.token);
-        }
-        lock_release(spin.sl);
-    }
-    return 0;
+	int tid = *(uint64*)arg;
+	int pass_num = pass_num;
+	int i;
+	for(i = 0;i < pass_num;i++)
+	{
+		if(thrower!=tid)
+		{
+			lock_acquire(&lock);
+			pass++;
+			printf("Pass number %d : ",pass);
+			printf("Thread %d is passing the token to Thread %d\n",thrower,tid);
+			thrower = tid;
+			lock_release(&lock);
+			sleep(20);
+		}
+		tid = (tid+1)%thread_num;
+	}
+	printf("Simulation of Frisbee game has finished, %d rounds were played in total!\n",pass_num);
+	exit(0);
 }
 
-int main(int argc, char *argv[]) {
-  struct data *tdata; 
-  num_threads = atoi(argv[1]);
-  num_pass = atoi(argv[2]);
-  spin.token  = 0;
-  spin.pass_value = 0;
-  lock_init(spin.sl);
-  tdata = malloc(sizeof(struct data) * num_threads);
-  for(int i = 0; i < num_threads; i++){
-      tdata[i].tid = i;
-  }
-
-  for(int i = 0; i < num_threads; i++){
-      thread_create((void *)pass_frisbee, (void *)&tdata[i]);
-  }
-  printf("Simulation of Frisbee game has finished, %d rounds were played in total! ", num_pass);  
-
-  return 0;
+int main(int argc, char *argv[])
+{
+	lock_init(&lock);
+	thread_num = atoi(argv[1]);
+	pass_num = atoi(argv[2]);
+	
+	int i;
+	uint64 arg = 0;
+	for(i=0;i<thread_num;i++)
+	{
+		arg = i+1;
+		thread_create(player((void*)&arg),(void*)&arg); 
+		sleep(10);
+	}
+	sleep(40);
+	exit(0);
 }

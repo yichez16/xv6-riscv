@@ -41,5 +41,6 @@ entry("lab1"); # lab 1 syscall for user
 entry("sched_statistics"); #lab 2 system call
 entry("allocateTickets"); #lab 2 system call
 entry("clone"); #lab 3 system call
+entry("texit");
 
 

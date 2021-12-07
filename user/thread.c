@@ -19,7 +19,7 @@ void lock_release(lock_t *l) {
     l->held = 0;
 }
 
-int thread_create(void* start_routine(void*), void* arg) {
+void *thread_create(void* start_routine(void*), void* arg) {
   void *t_stack = malloc(8192);
   int tid = clone(t_stack, 8192);
 
@@ -27,5 +27,6 @@ int thread_create(void* start_routine(void*), void* arg) {
     (start_routine)(arg);
     return 0;
   }
-  else return tid;
+  texit();
+  return 0;
 }

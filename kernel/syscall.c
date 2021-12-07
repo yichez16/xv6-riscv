@@ -111,6 +111,8 @@ extern uint64 sys_lab1(void); // first lab: declaration
 extern uint64 sys_sched_statistics(void); // second lab: declaration
 extern uint64 sys_allocateTickets(void); // second lab
 extern uint64 sys_clone(void);  // lab3
+extern uint64 sys_texit(void);  // lab3
+
 
 
 static uint64 (*syscalls[])(void) = {
@@ -139,7 +141,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_lab1]    sys_lab1, // lab1: system call entry
 [SYS_sched_statistics]   sys_sched_statistics, // lab2: System call entry
 [SYS_allocateTickets]   sys_allocateTickets,  // lab2 : syscall
-[SYS_clone]   sys_clone, // lab3 : clone
+[SYS_clone]   sys_clone, // lab3 
+[SYS_texit]   sys_texit, // lab3 
 };
 
 void

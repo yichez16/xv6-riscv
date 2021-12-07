@@ -25,3 +25,4 @@
 #define SYS_sched_statistics   24 // second Lab
 #define SYS_allocateTickets   25 // second lab
 #define SYS_clone  26 // lab 3
+#define SYS_texit  27 // lab 3

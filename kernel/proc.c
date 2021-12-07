@@ -253,38 +253,6 @@ found:
   return p;
 }
 
-static struct proc*
-allocproc_c(pagetable_t pt)
-{
-  struct proc *p;
-
-  for(p = proc; p < &proc[NPROC]; p++) {
-    acquire(&p->lock);
-    if(p->state == UNUSED) {
-      goto found;
-    } else {
-      release(&p->lock);
-    }
-  }
-  return 0;
-
-found:
-  p->pid = allocpid();
-  p->state = USED;
-
-  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
-    freeproc(p);
-    release(&p->lock);
-    return 0;
-  }
-
-  p->pagetable = pt;
-  memset(&p->context, 0, sizeof(p->context));
-  p->context.ra = (uint64)forkret;
-  p->context.sp = p->kstack + PGSIZE;
-  return p;
-}
-
 
 
 
@@ -494,7 +462,7 @@ void
 exit(int status)
 {
   struct proc *p = myproc();
-  
+
   if(p == initproc)
     panic("init exiting");
 
@@ -519,7 +487,7 @@ exit(int status)
 
   // Parent might be sleeping in wait().
   wakeup(p->parent);
-
+  
   acquire(&p->lock);
 
   p->xstate = status;
@@ -547,7 +515,7 @@ wait(uint64 addr)
     // Scan through table looking for exited children.
     havekids = 0;
     for(np = proc; np < &proc[NPROC]; np++){
-      if(np->parent == p){
+      if(np->parent == p || np->pagetable != p->pagetable){
         // make sure the child isn't still in exit() or swtch().
         acquire(&np->lock);
 
@@ -1050,7 +1018,7 @@ clone(void *stack, int size)
   struct proc *p = myproc(); // parent process
 
   // Allocate process.
-  if((np = allocproc_c(p->pagetable)) == 0){
+  if((np = allocproc()) == 0){
     return -1;
   }
 
@@ -1059,20 +1027,7 @@ clone(void *stack, int size)
   np->sz = p->sz;  // same size
   *np->trapframe = *p->trapframe;
 
-  if (p->pid > 0) {
-    if(mappages(np->pagetable, TRAPFRAME- PGSIZE * (p->pid), PGSIZE,
-                (uint64)(np->trapframe), PTE_R | PTE_W) < 0){
-      uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
-      return 0;
-    }
-  }
-  else {
-    if(mappages(np->pagetable, TRAPFRAME, PGSIZE,
-                (uint64)(np->trapframe), PTE_R | PTE_W) < 0){
-      uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
-      return 0;
-    }
-  }
+  np->trapframe->a0 = 0; // return 0 to child process
 
   // use the same file descriptor
   for(i = 0; i < NOFILE; i++)
@@ -1081,6 +1036,11 @@ clone(void *stack, int size)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
+
+  np->context.sp = (uint64)(stack + PGSIZE - 4);
+  *((uint64*)(np->context.sp)-4) = 0xFFFFFFFF;
+  np->context.sp = (np->context.sp) - 4;
+  
   pid = np->pid;
 
   release(&np->lock);
@@ -1094,4 +1054,39 @@ clone(void *stack, int size)
   release(&np->lock);
 
   return pid;
+}
+
+void texit(void)
+{
+	int fd;
+	struct proc *p = myproc();
+	
+	if(p == initproc)
+	{
+		panic("init exiting");
+	}
+	// Close all open files.
+	for(fd=0;fd < NOFILE;fd++)
+	{
+		if(p->ofile[fd])
+		{
+			struct file *f = p->ofile[fd];
+			fileclose(f);
+			p->ofile[fd]=0;
+		}
+	}
+	
+	begin_op();
+	iput(p->cwd);
+	end_op();
+	p->cwd = 0;
+
+	// Parent might be sleeping in wait().
+	acquire(&wait_lock);
+	wakeup(p->parent);
+	
+	p->state = ZOMBIE;
+	release(&wait_lock);
+	sched();
+	panic("zombie exit");
 }
