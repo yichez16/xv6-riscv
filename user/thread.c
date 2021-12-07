@@ -5,18 +5,15 @@
 #include "kernel/param.h"
 
 void lock_init(lock_t *l) {
-  l->held = 0;
+  l->flag = 0;
 
 }
 void lock_acquire(lock_t *l) {
-  while(__sync_lock_test_and_set(&l->held, 1) != 0)
+  while(__sync_lock_test_and_set(&l->flag, 1) != 0)
     ;
 }
 void lock_release(lock_t *l) {
-//   if(l->held){
-//     __sync_lock_test_and_set(&l->held, 0);
-//   }
-    l->held = 0;
+    l->flag = 0;
 }
 
 void *thread_create(void* start_routine(void*), void* arg) {

@@ -2,7 +2,7 @@ struct stat;
 struct rtcdate;
 //struct for thread lib
 struct lock_t {
-  uint held;
+  uint flag;
 };
 typedef struct lock_t lock_t;
 
