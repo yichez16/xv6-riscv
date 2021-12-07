@@ -9,7 +9,7 @@ int thrower;
 
 lock_t lock;
 
-void *play(void *arg)
+void *player(void *arg)
 {
 	int tid = *(uint64*)arg;
 	int pass_num = pass_round;
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 	for(i=0;i<thread_num;i++)
 	{
 		arg = i+1;
-		thread_create(play((void*)&arg),(void*)&arg); 
+		thread_create(player((void*)&arg),(void*)&arg); 
 		sleep(10);
 	}
 	sleep(40);
